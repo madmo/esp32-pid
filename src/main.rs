@@ -15,39 +15,34 @@ fn main() {
     let mut delay = esp_idf_hal::delay::Ets {};
     let mut sensor = tsic::Tsic::with_vdd_control(tsic::SensorType::Tsic306, tsic_data, tsic_power);
 
-    let window_size = 12;
-    let mut pid = pid::Pid::new(67.0, 67.0 / 399.0, 67.0 * 399.0, 100.0, 100.0, 100.0, window_size as f32, 95.0);
-    
-    let mut counter = 0;
-    let mut duty = 0.0;
+    let mut pid = pid_ctrl::PidCtrl::new_with_pid(0.7, 0.00005, 0.0);
+    pid.init(95.0, 0.0);
 
+    let mut last_measurement = std::time::Instant::now();
     loop {
-        let on = if duty < counter as f32 {
-            relay.set_low().unwrap();
-            false
-        } else {
-            relay.set_high().unwrap();
-            true
-        };
-
         if let Ok(temperature) = sensor.read(&mut delay) {
-            let output = pid.next_control_output(temperature.as_celsius());
-            duty = output.output;
+            let output = pid.step(pid_ctrl::PidIn::new(temperature.as_celsius(), last_measurement.elapsed().as_millis() as f32));
+            last_measurement = std::time::Instant::now();
 
-            println!(
-                "# {};{};{};{}",
-                on,
-                temperature.as_celsius(),
-                output.output,
-                counter
-            );
+            for i in 0..10 {
+                let power_on = output.out > i as f32;
+
+                if power_on {
+                    relay.set_high().unwrap();
+                } else {
+                    relay.set_low().unwrap();
+                }
+
+                println!(
+                    "# {};{};{};{}",
+                    temperature.as_celsius(),
+                    output.out,
+                    i,
+                    power_on
+                );
+
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
         }
-
-        counter += 1;
-        if counter > window_size {
-            counter = 0;
-        }
-
-        std::thread::sleep(std::time::Duration::from_millis(10));
     }
 }

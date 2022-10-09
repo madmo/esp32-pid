@@ -19,7 +19,7 @@ pio = ["esp-idf-sys/pio"]
 embedded-hal = "0.2.7"
 esp-idf-hal = "0.38.1"
 esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
-pid = "3.0.0"
+pid-ctrl = "0.1.3"
 tsic = "0.2.1"
 
 
