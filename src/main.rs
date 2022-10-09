@@ -47,5 +47,7 @@ fn main() {
         if counter > window_size {
             counter = 0;
         }
+
+        std::thread::sleep(std::time::Duration::from_millis(10));
     }
 }
